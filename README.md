@@ -1,11 +1,6 @@
-## My Project
-
-TODO: Fill this README out!
-
-Be sure to:
-
-* Change the title in this README
-* Edit your repository description on GitHub
+## Customize AWS Config resource tracking in AWS Control Tower environment
+This github repository is part of AWS blog post  https://aws-blogs-prod.amazon.com/mt/customize-aws-co…ower-environment/ 
+Please refer to the blog for what this sample code does and how to use it.
 
 ## Security
 
