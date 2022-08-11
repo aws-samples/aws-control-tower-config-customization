@@ -3,8 +3,8 @@ Description: 'AWS CloudFormation Template to update config recorder settings in 
 Parameters:
 
   ExcludedAccounts:
-    Description: Excluded Accounts list. This list should contain Mgment account, Log Archive and Audit accounts at the minimum
-    Default: "['123456789011', '123456789012', '123456789013']"
+    Description: Excluded Accounts list. This list should contain Management account, Log Archive and Audit accounts at the minimum
+    Default: "['111111111111', '222222222222', '333333333333']"
     MaxLength: '200'
     MinLength: '36'
     Type: String
