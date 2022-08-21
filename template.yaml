@@ -229,7 +229,7 @@ Resources:
       Properties:
         Description: Copies objects from the S3 bucket to a new location.
         Handler: index.handler
-        Runtime: python3.7
+        Runtime: python3.9
         Role: !GetAtt 'CopyZipsRole.Arn'
         ReservedConcurrentExecutions: 1
         Timeout: 240
