@@ -23,6 +23,7 @@ import boto3
 import cfnresource
 import os
 import logging
+import ast
 
 def lambda_handler(event, context):
     
@@ -70,6 +71,16 @@ def lambda_handler(event, context):
             response = {}
             ## Send signal back to CloudFormation after the first run
             cfnresource.send(event, context, cfnresource.SUCCESS, response, "CustomResourcePhysicalID")
+        elif ('LogicalResourceId' in event) and (event['RequestType'] == 'Update'):
+            logging.info('Update Update')
+            logging.info(
+                'overriding config recorder for ALL accounts because of first run after function deployment from CloudFormation')
+            override_config_recorder(excluded_accounts, sqs_url, '', 'Update')
+            response = {}
+            update_excluded_accounts(excluded_accounts,sqs_url)
+            
+            ## Send signal back to CloudFormation after the first run
+            cfnresource.send(event, context, cfnresource.SUCCESS, response, "CustomResourcePhysicalID")    
         elif ('LogicalResourceId' in event) and (event['RequestType'] == 'Delete'):
             logging.info('DELETE DELETE')
             logging.info(
@@ -143,4 +154,29 @@ def send_message_to_sqs(event, account, region, excluded_accounts, sqs_client, s
     except Exception as e:
         exception_type = e.__class__.__name__
         exception_message = str(e)
-        logging.exception(f'{exception_type}: {exception_message}')            
+        logging.exception(f'{exception_type}: {exception_message}') 
+                   
+def update_excluded_accounts(excluded_accounts,sqs_url):
+    
+    try:
+        acctid = boto3.client('sts')
+        
+        new_excluded_accounts = "['" + acctid.get_caller_identity().get('Account') + "']"
+        
+        logging.info(f'templist: {new_excluded_accounts}')
+        
+        templist=ast.literal_eval(excluded_accounts)
+        
+        templist_out=[]
+        
+        for acct in templist:
+            
+            if acctid.get_caller_identity().get('Account') != acct:
+                templist_out.append(acct)
+                logging.info(f'Delete request sent: {acct}')
+                override_config_recorder(new_excluded_accounts, sqs_url, acct, 'Delete')
+        
+    except Exception as e:
+        exception_type = e.__class__.__name__
+        exception_message = str(e)
+        logging.exception(f'{exception_type}: {exception_message}')  
