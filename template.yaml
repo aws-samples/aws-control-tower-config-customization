@@ -16,7 +16,7 @@ Parameters:
 
   CloudFormationVersion:
     Type: String
-    Default: 1
+    Default: 2
 
 Resources:
     LambdaZipsBucket:
