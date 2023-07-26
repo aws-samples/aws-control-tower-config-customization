@@ -18,21 +18,21 @@
 # IN THE SOFTWARE.
 #
 
-
 import boto3
 import json
-import os
 import logging
+import botocore.exceptions
+import os
 
 def lambda_handler(event, context):
-    
+
+
     LOG_LEVEL = os.getenv('LOG_LEVEL')
     logging.getLogger().setLevel(LOG_LEVEL)
 
     try:
-        
-        logging.info('Event Data:')
-        logging.info(event)
+
+        logging.info('Event Body:')
 
         body = json.loads(event['Records'][0]['body'])
         account_id = body['Account']
@@ -42,6 +42,12 @@ def lambda_handler(event, context):
         logging.info(f'Extracted Account: {account_id}')
         logging.info(f'Extracted Region: {aws_region}')
         logging.info(f'Extracted Event: {event}')
+
+        bc = botocore.__version__
+        b3 = boto3.__version__
+
+        logging.info(f'Botocore : {bc}')
+        logging.info(f'Boto3 : {b3}')
 
         STS = boto3.client("sts")
 
@@ -60,62 +66,68 @@ def lambda_handler(event, context):
                     sts_session = boto3.Session(
                         aws_access_key_id=response['Credentials']['AccessKeyId'],
                         aws_secret_access_key=response['Credentials']['SecretAccessKey'],
-                        aws_session_token=response['Credentials']['SessionToken']   )
+                        aws_session_token=response['Credentials']['SessionToken'])
 
                     return sts_session
-            except ClientError as exe:
+            except botocore.exceptions.ClientError as exe:
                 logging.error('Unable to assume role')
                 raise exe
-
 
         sts_session = assume_role(account_id)
         logging.info(f'Printing STS session: {sts_session}')
 
-        #Lets use the session and create a client for configservice
-        configservice = sts_session.client('config',region_name=aws_region)
+        # Use the session and create a client for configservice
+        configservice = sts_session.client('config', region_name=aws_region)
 
-        #lets describe for configguration recorder
+        # Describe configuration recorder
         configrecorder = configservice.describe_configuration_recorders()
-        logging.info(f'Existing Configuration Recorder :' ,configrecorder)
+        logging.info(f'Existing Configuration Recorder :', configrecorder)
 
-        #ControlTower created configuration recorder with name "aws-controltower-BaselineConfigRecorder" and we will update just that
+        # ControlTower created configuration recorder with name "aws-controltower-BaselineConfigRecorder" and we will update just that
         try:
             role_arn = 'arn:aws:iam::' + account_id + ':role/aws-controltower-ConfigRecorderRole'
-            CONFIG_RECORDER_RESOURCE_STRING = os.getenv('CONFIG_RECORDER_RESOURCE_LIST')
-            CONFIG_RECORDER_RESOURCE_LIST = CONFIG_RECORDER_RESOURCE_STRING.split(',')
+
+            CONFIG_RECORDER_EXCLUSION_RESOURCE_STRING = os.getenv('CONFIG_RECORDER_EXCLUDED_RESOURCE_LIST')
+            CONFIG_RECORDER_EXCLUSION_RESOURCE_LIST = CONFIG_RECORDER_EXCLUSION_RESOURCE_STRING.split(',')
 
             # Event = Delete is when stack is deleted, we rollback changed made and leave it as ControlTower Intended
             if event == 'Delete':
                 response = configservice.put_configuration_recorder(
-                ConfigurationRecorder={
-                    'name': 'aws-controltower-BaselineConfigRecorder',
-                    'roleARN': role_arn,
-                    'recordingGroup': {
-                        'allSupported': True,
-                        'includeGlobalResourceTypes': False
-                    }
-                })
+                    ConfigurationRecorder={
+                        'name': 'aws-controltower-BaselineConfigRecorder',
+                        'roleARN': role_arn,
+                        'recordingGroup': {
+                            'allSupported': True,
+                            'includeGlobalResourceTypes': False
+                        }
+                    })
+                logging.info(f'Response for put_configuration_recorder :{response} ')
+
             else:
                 response = configservice.put_configuration_recorder(
-                ConfigurationRecorder={
-                    'name': 'aws-controltower-BaselineConfigRecorder',
-                    'roleARN': role_arn,
-                    'recordingGroup': {
-                        'allSupported': False,
-                        'includeGlobalResourceTypes': False,
-                        'resourceTypes': CONFIG_RECORDER_RESOURCE_LIST
-                    }
-                })
+                    ConfigurationRecorder={
+                        'name': 'aws-controltower-BaselineConfigRecorder',
+                        'roleARN': role_arn,
+                        'recordingGroup': {
+                            'allSupported': False,
+                            'includeGlobalResourceTypes': False,
+                            'exclusionByResourceTypes': {
+                                'resourceTypes': CONFIG_RECORDER_EXCLUSION_RESOURCE_LIST
+                            },
+                            'recordingStrategy': {
+                                'useOnly': 'EXCLUSION_BY_RESOURCE_TYPES'
+                            }
+                        }
+                    })
+                logging.info(f'Response for put_configuration_recorder :{response} ')
 
-            logging.info(f'Response for put_configuration_recorder :{response} ')
-
-            #lets describe for configuration recorder after the update
-            configrecorder =  configservice.describe_configuration_recorders()
+            # lets describe for configuration recorder after the update
+            configrecorder = configservice.describe_configuration_recorders()
             logging.info(f'Post Change Configuration recorder : {configrecorder}')
 
-        except ClientError as exe:
+        except botocore.exceptions.ClientError as exe:
             logging.error('Unable to Update Config Recorder for Account and Region : ', account_id, aws_region)
-            configrecorder =  configservice.describe_configuration_recorders()
+            configrecorder = configservice.describe_configuration_recorders()
             logging.info(f'Exception : {configrecorder}')
             raise exe
 
