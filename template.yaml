@@ -30,6 +30,7 @@ Resources:
     ProducerLambda:
         Type: AWS::Lambda::Function
         DeletionPolicy: Retain
+        DependsOn: CopyZips
         Properties:
             #FunctionName: ct_configrecorder_override_producer_cf
             Code:
@@ -61,6 +62,7 @@ Resources:
     ConsumerLambda:
         Type: AWS::Lambda::Function
         DeletionPolicy: Retain
+        DependsOn: CopyZips
         Properties:
             #FunctionName: ct_configrecorder_override_consumer_cf
             Code:
