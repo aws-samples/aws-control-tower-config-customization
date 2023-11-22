@@ -85,7 +85,7 @@ def lambda_handler(event, context):
 
         # ControlTower created configuration recorder with name "aws-controltower-BaselineConfigRecorder" and we will update just that
         try:
-            role_arn = 'arn:aws:iam::' + account_id + ':role/aws-controltower-ConfigRecorderRole'
+            role_arn = 'arn:aws:iam::' + account_id + ':role/aws-service-role/config.amazonaws.com/AWSServiceRoleForConfig'
 
             CONFIG_RECORDER_EXCLUSION_RESOURCE_STRING = os.getenv('CONFIG_RECORDER_EXCLUDED_RESOURCE_LIST')
             CONFIG_RECORDER_EXCLUSION_RESOURCE_LIST = CONFIG_RECORDER_EXCLUSION_RESOURCE_STRING.split(',')
@@ -98,7 +98,7 @@ def lambda_handler(event, context):
                         'roleARN': role_arn,
                         'recordingGroup': {
                             'allSupported': True,
-                            'includeGlobalResourceTypes': False
+                            'includeGlobalResourceTypes': True if os.getenv('CONTROL_TOWER_HOME_REGION') == aws_region else False
                         }
                     })
                 logging.info(f'Response for put_configuration_recorder :{response} ')
@@ -110,7 +110,6 @@ def lambda_handler(event, context):
                         'roleARN': role_arn,
                         'recordingGroup': {
                             'allSupported': False,
-                            'includeGlobalResourceTypes': False,
                             'exclusionByResourceTypes': {
                                 'resourceTypes': CONFIG_RECORDER_EXCLUSION_RESOURCE_LIST
                             },

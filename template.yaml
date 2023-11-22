@@ -13,10 +13,17 @@ Parameters:
     Description: List of all resource types to be excluded from Config Recorder
     Default: "AWS::HealthLake::FHIRDatastore,AWS::Pinpoint::Segment,AWS::Pinpoint::ApplicationSettings"
     Type: String
+  
+  ControlTowerHomeRegion:
+    Type: String
 
   CloudFormationVersion:
     Type: String
     Default: 2
+  
+  PythonRuntimeVersion:
+    Type: String
+    Default: python3.11
 
 Resources:
     LambdaZipsBucket:
@@ -38,7 +45,7 @@ Resources:
                 S3Key: ct-blogs-content/ct_configrecorder_override_producer.zip
             Handler: ct_configrecorder_override_producer.lambda_handler
             Role: !GetAtt ProducerLambdaExecutionRole.Arn
-            Runtime: python3.10
+            Runtime: !Ref PythonRuntimeVersion
             MemorySize: 128
             Timeout: 300
             Architectures:
@@ -70,7 +77,7 @@ Resources:
                 S3Key: ct-blogs-content/ct_configrecorder_override_consumer_v2.zip
             Handler: ct_configrecorder_override_consumer.lambda_handler
             Role: !GetAtt ConsumerLambdaExecutionRole.Arn
-            Runtime: python3.10
+            Runtime: !Ref PythonRuntimeVersion
             MemorySize: 128
             Timeout: 180
             Architectures:
@@ -80,6 +87,7 @@ Resources:
                 Variables:
                     LOG_LEVEL: INFO
                     CONFIG_RECORDER_EXCLUDED_RESOURCE_LIST: !Ref ConfigRecorderExcludedResourceTypes
+                    CONTROL_TOWER_HOME_REGION: !Ref ControlTowerHomeRegion
 
     ConsumerLambdaEventSourceMapping:
         Type: AWS::Lambda::EventSourceMapping
@@ -245,7 +253,7 @@ Resources:
       Properties:
         Description: Copies objects from the S3 bucket to a new location.
         Handler: index.handler
-        Runtime: python3.10
+        Runtime: !Ref PythonRuntimeVersion
         Role: !GetAtt 'CopyZipsRole.Arn'
         ReservedConcurrentExecutions: 1
         Timeout: 300
