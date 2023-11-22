@@ -210,7 +210,7 @@ Resources:
         #update this to match AWS public bucket
         #s3://marketplace-sa-resources/ct-blogs-content/ct_configrecorder_override_consumer_v2.zip
         #s3://marketplace-sa-resources/ct-blogs-content/ct_configrecorder_override_producer.zip
-        SourceBucket: sb1-sa-resources
+        SourceBucket: marketplace-sa-resources
         Prefix: ct-blogs-content/
         Objects:
           - 'ct_configrecorder_override_producer.zip'
@@ -239,7 +239,7 @@ Resources:
                     - s3:GetObject
                     - s3:GetObjectTagging
                   Resource:
-                    - !Sub 'arn:${AWS::Partition}:s3:::sb1-sa-resources/ct-blogs-content/*'
+                    - !Sub 'arn:${AWS::Partition}:s3:::marketplace-sa-resources/ct-blogs-content/*'
                 - Effect: Allow
                   Action:
                     - s3:PutObject
