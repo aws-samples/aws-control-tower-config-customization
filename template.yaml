@@ -13,6 +13,14 @@ Parameters:
     Description: List of all resource types to be excluded from Config Recorder
     Default: "AWS::HealthLake::FHIRDatastore,AWS::Pinpoint::Segment,AWS::Pinpoint::ApplicationSettings"
     Type: String
+  
+  ConfigRecorderRecordingFrequency:
+    Description: Frequency of recording configuration changes.
+    Default: CONTINUOUS
+    Type: String
+    AllowedValues:
+      - CONTINUOUS
+      - DAILY
 
   CloudFormationVersion:
     Type: String
@@ -80,6 +88,7 @@ Resources:
                 Variables:
                     LOG_LEVEL: INFO
                     CONFIG_RECORDER_EXCLUDED_RESOURCE_LIST: !Ref ConfigRecorderExcludedResourceTypes
+                    CONFIG_RECORDER_RECORDING_FREQUENCY: !Ref ConfigRecorderRecordingFrequency
 
     ConsumerLambdaEventSourceMapping:
         Type: AWS::Lambda::EventSourceMapping

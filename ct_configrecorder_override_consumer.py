@@ -89,6 +89,7 @@ def lambda_handler(event, context):
 
             CONFIG_RECORDER_EXCLUSION_RESOURCE_STRING = os.getenv('CONFIG_RECORDER_EXCLUDED_RESOURCE_LIST')
             CONFIG_RECORDER_EXCLUSION_RESOURCE_LIST = CONFIG_RECORDER_EXCLUSION_RESOURCE_STRING.split(',')
+            CONFIG_RECORDER_RECORDING_FREQUENCY = os.getenv('CONFIG_RECORDER_RECORDING_FREQUENCY')
 
             # Event = Delete is when stack is deleted, we rollback changed made and leave it as ControlTower Intended
             if event == 'Delete':
@@ -117,6 +118,9 @@ def lambda_handler(event, context):
                             'recordingStrategy': {
                                 'useOnly': 'EXCLUSION_BY_RESOURCE_TYPES'
                             }
+                        },
+                        'recordingMode': {
+                            'recordingFrequency': CONFIG_RECORDER_RECORDING_FREQUENCY
                         }
                     })
                 logging.info(f'Response for put_configuration_recorder :{response} ')
