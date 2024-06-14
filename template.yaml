@@ -14,6 +14,19 @@ Parameters:
     Default: "AWS::HealthLake::FHIRDatastore,AWS::Pinpoint::Segment,AWS::Pinpoint::ApplicationSettings"
     Type: String
 
+  ConfigRecorderDailyResourceTypes:
+    Description: List of all resource types to be set to a daily cadence
+    Default: "AWS::HealthLake::FHIRDatastore,AWS::Pinpoint::Segment,AWS::Pinpoint::ApplicationSettings"
+    Type: String
+
+  ConfigRecorderRecordingFrequency:
+    Description: Frequency of recording configuration changes.
+    Default: CONTINUOUS
+    Type: String
+    AllowedValues:
+      - CONTINUOUS
+      - DAILY
+
   CloudFormationVersion:
     Type: String
     Default: 2
@@ -27,6 +40,7 @@ Resources:
               - ServerSideEncryptionByDefault:
                   SSEAlgorithm: AES256
 
+
     ProducerLambda:
         Type: AWS::Lambda::Function
         DeletionPolicy: Retain
@@ -38,7 +52,7 @@ Resources:
                 S3Key: ct-blogs-content/ct_configrecorder_override_producer.zip
             Handler: ct_configrecorder_override_producer.lambda_handler
             Role: !GetAtt ProducerLambdaExecutionRole.Arn
-            Runtime: python3.10
+            Runtime: python3.11
             MemorySize: 128
             Timeout: 300
             Architectures:
@@ -70,7 +84,7 @@ Resources:
                 S3Key: ct-blogs-content/ct_configrecorder_override_consumer_v2.zip
             Handler: ct_configrecorder_override_consumer.lambda_handler
             Role: !GetAtt ConsumerLambdaExecutionRole.Arn
-            Runtime: python3.10
+            Runtime: python3.11
             MemorySize: 128
             Timeout: 180
             Architectures:
@@ -79,7 +93,9 @@ Resources:
             Environment:
                 Variables:
                     LOG_LEVEL: INFO
+                    CONFIG_RECORDER_DAILY_RESOURCE_LIST: !Ref ConfigRecorderDailyResourceTypes
                     CONFIG_RECORDER_EXCLUDED_RESOURCE_LIST: !Ref ConfigRecorderExcludedResourceTypes
+                    CONFIG_RECORDER_RECORDING_FREQUENCY: !Ref ConfigRecorderRecordingFrequency
 
     ConsumerLambdaEventSourceMapping:
         Type: AWS::Lambda::EventSourceMapping
