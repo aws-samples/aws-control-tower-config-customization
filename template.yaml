@@ -10,7 +10,7 @@ Parameters:
     Type: String
 
   ConfigRecorderExcludedResourceTypes:
-    Description: List of all resource types to be excluded from Config Recorder
+    Description: List of all resource types to be excluded from Config Recorder. Set to 'all' to exclude all resources
     Default: "AWS::HealthLake::FHIRDatastore,AWS::Pinpoint::Segment,AWS::Pinpoint::ApplicationSettings"
     Type: String
 
