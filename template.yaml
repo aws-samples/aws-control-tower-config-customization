@@ -26,6 +26,22 @@ Resources:
             ServerSideEncryptionConfiguration:
               - ServerSideEncryptionByDefault:
                   SSEAlgorithm: AES256
+    LambdaZipsBucketPolicy:
+      Type: AWS::S3::BucketPolicy
+      Properties:
+        Bucket:
+          Ref: LambdaZipsBucket
+        PolicyDocument:
+          Statement:
+            - Effect: Deny
+              Action: "s3:*"
+              Principal: "*"
+              Resource:
+                - !Sub 'arn:aws:s3:::${LambdaZipsBucket}'
+                - !Sub 'arn:aws:s3:::${LambdaZipsBucket}/*'
+              Condition:
+                Bool:
+                  aws:SecureTransport: false
 
     ProducerLambda:
         Type: AWS::Lambda::Function
