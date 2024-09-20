@@ -1,4 +1,5 @@
-# #
+
+#
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: MIT-0
 #
@@ -19,7 +20,7 @@
 #
 
 import boto3
-import cfnresource
+import cfnresponse
 import os
 import logging
 import ast
@@ -69,7 +70,7 @@ def lambda_handler(event, context):
             override_config_recorder(excluded_accounts, sqs_url, '', 'Create')
             response = {}
             ## Send signal back to CloudFormation after the first run
-            cfnresource.send(event, context, cfnresource.SUCCESS, response, "CustomResourcePhysicalID")
+            cfnresponse.send(event, context, cfnresponse.SUCCESS, response, "CustomResourcePhysicalID")
         elif ('LogicalResourceId' in event) and (event['RequestType'] == 'Update'):
             logging.info('Update Update')
             logging.info(
@@ -79,7 +80,7 @@ def lambda_handler(event, context):
             update_excluded_accounts(excluded_accounts,sqs_url)
             
             ## Send signal back to CloudFormation after the first run
-            cfnresource.send(event, context, cfnresource.SUCCESS, response, "CustomResourcePhysicalID")    
+            cfnresponse.send(event, context, cfnresponse.SUCCESS, response, "CustomResourcePhysicalID")    
         elif ('LogicalResourceId' in event) and (event['RequestType'] == 'Delete'):
             logging.info('DELETE DELETE')
             logging.info(
@@ -87,7 +88,7 @@ def lambda_handler(event, context):
             override_config_recorder(excluded_accounts, sqs_url, '', 'Delete')
             response = {}
             ## Send signal back to CloudFormation after the final run
-            cfnresource.send(event, context, cfnresource.SUCCESS, response, "CustomResourcePhysicalID")
+            cfnresponse.send(event, context, cfnresponse.SUCCESS, response, "CustomResourcePhysicalID")
         else:
             logging.info("No matching event found")
 
