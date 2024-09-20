@@ -86,13 +86,17 @@ def lambda_handler(event, context):
         try:
             role_arn = 'arn:aws:iam::' + account_id + ':role/aws-controltower-ConfigRecorderRole'
 
-            CONFIG_RECORDER_DAILY_RESOURCE_STRING = os.getenv('CONFIG_RECORDER_DAILY_RESOURCE_LIST')
-            CONFIG_RECORDER_DAILY_RESOURCE_LIST = CONFIG_RECORDER_DAILY_RESOURCE_STRING.split(
+            CONFIG_RECORDER_DAILY_RESOURCE_STRING = os.getenv('CONFIG_RECORDER_OVERRIDE_DAILY_RESOURCE_LIST')
+            CONFIG_RECORDER_OVERRIDE_DAILY_RESOURCE_LIST = CONFIG_RECORDER_DAILY_RESOURCE_STRING.split(
                 ',') if CONFIG_RECORDER_DAILY_RESOURCE_STRING != '' else []
-            CONFIG_RECORDER_EXCLUSION_RESOURCE_STRING = os.getenv('CONFIG_RECORDER_EXCLUDED_RESOURCE_LIST')
+            CONFIG_RECORDER_EXCLUSION_RESOURCE_STRING = os.getenv('CONFIG_RECORDER_OVERRIDE_EXCLUDED_RESOURCE_LIST')
             CONFIG_RECORDER_EXCLUSION_RESOURCE_LIST = CONFIG_RECORDER_EXCLUSION_RESOURCE_STRING.split(
                 ',') if CONFIG_RECORDER_EXCLUSION_RESOURCE_STRING != '' else []
-            CONFIG_RECORDER_RECORDING_FREQUENCY = os.getenv('CONFIG_RECORDER_RECORDING_FREQUENCY')
+            CONFIG_RECORDER_DEFAULT_RECORDING_FREQUENCY = os.getenv('CONFIG_RECORDER_DEFAULT_RECORDING_FREQUENCY')
+
+            #remove any resource type from daily list that are in exclision list
+            res = [x for x in CONFIG_RECORDER_OVERRIDE_DAILY_RESOURCE_LIST if x not in CONFIG_RECORDER_EXCLUSION_RESOURCE_LIST]
+            CONFIG_RECORDER_OVERRIDE_DAILY_RESOURCE_LIST[:] = res
 
             # Event = Delete is when stack is deleted, we rollback changed made and leave it as ControlTower Intended
             if event == 'Delete':
@@ -122,14 +126,14 @@ def lambda_handler(event, context):
                         }
                     },
                     'recordingMode': {
-                        'recordingFrequency': CONFIG_RECORDER_RECORDING_FREQUENCY,
+                        'recordingFrequency': CONFIG_RECORDER_DEFAULT_RECORDING_FREQUENCY,
                         'recordingModeOverrides': [
                             {
                                 'description': 'DAILY_OVERRIDE',
-                                'resourceTypes': CONFIG_RECORDER_DAILY_RESOURCE_LIST,
+                                'resourceTypes': CONFIG_RECORDER_OVERRIDE_DAILY_RESOURCE_LIST,
                                 'recordingFrequency': 'DAILY'
                             }
-                        ] if CONFIG_RECORDER_DAILY_RESOURCE_LIST else []
+                        ] if CONFIG_RECORDER_OVERRIDE_DAILY_RESOURCE_LIST else []
                     }
                 }
 
