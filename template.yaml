@@ -16,11 +16,11 @@ Parameters:
 
   ConfigRecorderDailyResourceTypes:
     Description: List of all resource types to be set to a daily cadence
-    Default: "AWS::HealthLake::FHIRDatastore,AWS::Pinpoint::Segment,AWS::Pinpoint::ApplicationSettings"
+    Default: "AWS::AutoScaling::AutoScalingGroup,AWS::AutoScaling::LaunchConfiguration"
     Type: String
 
-  ConfigRecorderRecordingFrequency:
-    Description: Frequency of recording configuration changes.
+  ConfigRecorderDefaultRecordingFrequency:
+    Description: Default Frequency of recording configuration changes.
     Default: CONTINUOUS
     Type: String
     AllowedValues:
@@ -29,7 +29,8 @@ Parameters:
 
   CloudFormationVersion:
     Type: String
-    Default: 2
+    Default: 1
+  
 
 Resources:
     LambdaZipsBucket:
@@ -39,6 +40,7 @@ Resources:
             ServerSideEncryptionConfiguration:
               - ServerSideEncryptionByDefault:
                   SSEAlgorithm: AES256
+
     LambdaZipsBucketPolicy:
       Type: AWS::S3::BucketPolicy
       Properties:
@@ -56,19 +58,17 @@ Resources:
                 Bool:
                   aws:SecureTransport: false
 
-
     ProducerLambda:
         Type: AWS::Lambda::Function
         DeletionPolicy: Retain
         DependsOn: CopyZips
         Properties:
-            #FunctionName: ct_configrecorder_override_producer_cf
             Code:
                 S3Bucket: !Ref LambdaZipsBucket
                 S3Key: ct-blogs-content/ct_configrecorder_override_producer.zip
             Handler: ct_configrecorder_override_producer.lambda_handler
             Role: !GetAtt ProducerLambdaExecutionRole.Arn
-            Runtime: python3.11
+            Runtime: python3.12
             MemorySize: 128
             Timeout: 300
             Architectures:
@@ -94,13 +94,12 @@ Resources:
         DeletionPolicy: Retain
         DependsOn: CopyZips
         Properties:
-            #FunctionName: ct_configrecorder_override_consumer_cf
             Code:
                 S3Bucket: !Ref LambdaZipsBucket
-                S3Key: ct-blogs-content/ct_configrecorder_override_consumer_v2.zip
+                S3Key: ct-blogs-content/ct_configrecorder_override_consumer.zip
             Handler: ct_configrecorder_override_consumer.lambda_handler
             Role: !GetAtt ConsumerLambdaExecutionRole.Arn
-            Runtime: python3.11
+            Runtime: python3.12
             MemorySize: 128
             Timeout: 180
             Architectures:
@@ -109,9 +108,9 @@ Resources:
             Environment:
                 Variables:
                     LOG_LEVEL: INFO
-                    CONFIG_RECORDER_DAILY_RESOURCE_LIST: !Ref ConfigRecorderDailyResourceTypes
-                    CONFIG_RECORDER_EXCLUDED_RESOURCE_LIST: !Ref ConfigRecorderExcludedResourceTypes
-                    CONFIG_RECORDER_RECORDING_FREQUENCY: !Ref ConfigRecorderRecordingFrequency
+                    CONFIG_RECORDER_OVERRIDE_DAILY_RESOURCE_LIST: !Ref ConfigRecorderDailyResourceTypes
+                    CONFIG_RECORDER_OVERRIDE_EXCLUDED_RESOURCE_LIST: !Ref ConfigRecorderExcludedResourceTypes
+                    CONFIG_RECORDER_DEFAULT_RECORDING_FREQUENCY: !Ref ConfigRecorderDefaultRecordingFrequency
 
     ConsumerLambdaEventSourceMapping:
         Type: AWS::Lambda::EventSourceMapping
@@ -192,7 +191,6 @@ Resources:
         Type: AWS::SQS::Queue
         DeletionPolicy: Retain
         Properties:
-            #QueueName: ct_configrecorder_override_cf
             VisibilityTimeout: 180
             DelaySeconds: 5
             KmsMasterKeyId: alias/aws/sqs
@@ -209,7 +207,7 @@ Resources:
                             "eventName": ["UpdateLandingZone", "CreateManagedAccount", "UpdateManagedAccount"]
                           }
                         }'
-          Name: !GetAtt SQSConfigRecorder.QueueName #ct_configrecorder_override_cf
+          Name: !GetAtt SQSConfigRecorder.QueueName 
           State: ENABLED
           Targets: 
             - 
@@ -231,14 +229,11 @@ Resources:
       Properties:
         ServiceToken: !GetAtt 'CopyZipsFunction.Arn'
         DestBucket: !Ref 'LambdaZipsBucket'
-        #update this to match AWS public bucket
-        #s3://marketplace-sa-resources/ct-blogs-content/ct_configrecorder_override_consumer_v2.zip
-        #s3://marketplace-sa-resources/ct-blogs-content/ct_configrecorder_override_producer.zip
         SourceBucket: marketplace-sa-resources
         Prefix: ct-blogs-content/
         Objects:
           - 'ct_configrecorder_override_producer.zip'
-          - 'ct_configrecorder_override_consumer_v2.zip'
+          - 'ct_configrecorder_override_consumer.zip'
 
     CopyZipsRole:
       Type: AWS::IAM::Role
@@ -262,8 +257,7 @@ Resources:
                   Action:
                     - s3:GetObject
                     - s3:GetObjectTagging
-                  Resource:
-                    - !Sub 'arn:${AWS::Partition}:s3:::marketplace-sa-resources/ct-blogs-content/*'
+                  Resource: !Sub 'arn:${AWS::Partition}:s3:::marketplace-sa-resources/ct-blogs-content/*'                    
                 - Effect: Allow
                   Action:
                     - s3:PutObject
@@ -277,7 +271,7 @@ Resources:
       Properties:
         Description: Copies objects from the S3 bucket to a new location.
         Handler: index.handler
-        Runtime: python3.10
+        Runtime: python3.12
         Role: !GetAtt 'CopyZipsRole.Arn'
         ReservedConcurrentExecutions: 1
         Timeout: 300
