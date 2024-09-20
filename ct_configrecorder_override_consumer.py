@@ -24,15 +24,14 @@ import logging
 import botocore.exceptions
 import os
 
+
 def lambda_handler(event, context):
-
-
     LOG_LEVEL = os.getenv('LOG_LEVEL')
     logging.getLogger().setLevel(LOG_LEVEL)
 
     try:
 
-        logging.info('Event Body:')
+        logging.info(f'Event: {event}')
 
         body = json.loads(event['Records'][0]['body'])
         account_id = body['Account']
@@ -87,8 +86,13 @@ def lambda_handler(event, context):
         try:
             role_arn = 'arn:aws:iam::' + account_id + ':role/aws-controltower-ConfigRecorderRole'
 
+            CONFIG_RECORDER_DAILY_RESOURCE_STRING = os.getenv('CONFIG_RECORDER_DAILY_RESOURCE_LIST')
+            CONFIG_RECORDER_DAILY_RESOURCE_LIST = CONFIG_RECORDER_DAILY_RESOURCE_STRING.split(
+                ',') if CONFIG_RECORDER_DAILY_RESOURCE_STRING != '' else []
             CONFIG_RECORDER_EXCLUSION_RESOURCE_STRING = os.getenv('CONFIG_RECORDER_EXCLUDED_RESOURCE_LIST')
-            CONFIG_RECORDER_EXCLUSION_RESOURCE_LIST = CONFIG_RECORDER_EXCLUSION_RESOURCE_STRING.split(',')
+            CONFIG_RECORDER_EXCLUSION_RESOURCE_LIST = CONFIG_RECORDER_EXCLUSION_RESOURCE_STRING.split(
+                ',') if CONFIG_RECORDER_EXCLUSION_RESOURCE_STRING != '' else []
+            CONFIG_RECORDER_RECORDING_FREQUENCY = os.getenv('CONFIG_RECORDER_RECORDING_FREQUENCY')
 
             # Event = Delete is when stack is deleted, we rollback changed made and leave it as ControlTower Intended
             if event == 'Delete':
@@ -104,21 +108,38 @@ def lambda_handler(event, context):
                 logging.info(f'Response for put_configuration_recorder :{response} ')
 
             else:
-                response = configservice.put_configuration_recorder(
-                    ConfigurationRecorder={
-                        'name': 'aws-controltower-BaselineConfigRecorder',
-                        'roleARN': role_arn,
-                        'recordingGroup': {
-                            'allSupported': False,
-                            'includeGlobalResourceTypes': False,
-                            'exclusionByResourceTypes': {
-                                'resourceTypes': CONFIG_RECORDER_EXCLUSION_RESOURCE_LIST
-                            },
-                            'recordingStrategy': {
-                                'useOnly': 'EXCLUSION_BY_RESOURCE_TYPES'
-                            }
+                config_recorder = {
+                    'name': 'aws-controltower-BaselineConfigRecorder',
+                    'roleARN': role_arn,
+                    'recordingGroup': {
+                        'allSupported': False,
+                        'includeGlobalResourceTypes': False,
+                        'exclusionByResourceTypes': {
+                            'resourceTypes': CONFIG_RECORDER_EXCLUSION_RESOURCE_LIST
+                        },
+                        'recordingStrategy': {
+                            'useOnly': 'EXCLUSION_BY_RESOURCE_TYPES'
                         }
-                    })
+                    },
+                    'recordingMode': {
+                        'recordingFrequency': CONFIG_RECORDER_RECORDING_FREQUENCY,
+                        'recordingModeOverrides': [
+                            {
+                                'description': 'DAILY_OVERRIDE',
+                                'resourceTypes': CONFIG_RECORDER_DAILY_RESOURCE_LIST,
+                                'recordingFrequency': 'DAILY'
+                            }
+                        ] if CONFIG_RECORDER_DAILY_RESOURCE_LIST else []
+                    }
+                }
+
+                if not CONFIG_RECORDER_EXCLUSION_RESOURCE_LIST:
+                    config_recorder['recordingGroup'].pop('exclusionByResourceTypes')
+                    config_recorder['recordingGroup'].pop('recordingStrategy')
+                    config_recorder['recordingGroup']['allSupported'] = True
+                    config_recorder['recordingGroup']['includeGlobalResourceTypes'] = True
+                response = configservice.put_configuration_recorder(
+                    ConfigurationRecorder=config_recorder)
                 logging.info(f'Response for put_configuration_recorder :{response} ')
 
             # lets describe for configuration recorder after the update
