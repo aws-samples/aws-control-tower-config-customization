@@ -107,7 +107,8 @@ def lambda_handler(event, context):
                         'recordingGroup': {
                             'allSupported': True,
                             'includeGlobalResourceTypes': False
-                        }
+                        },
+                        'recordingMode': {'recordingFrequency': 'CONTINUOUS'},
                     })
                 logging.info(f'Response for put_configuration_recorder :{response} ')
 
