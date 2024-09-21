@@ -74,7 +74,7 @@ def lambda_handler(event, context):
         elif ('LogicalResourceId' in event) and (event['RequestType'] == 'Update'):
             logging.info('Update Update')
             logging.info(
-                'overriding config recorder for ALL accounts because of first run after function deployment from CloudFormation')
+                'overriding config recorder for ALL accounts because of CloudFormation stack update')
             override_config_recorder(excluded_accounts, sqs_url, '', 'Update')
             response = {}
             update_excluded_accounts(excluded_accounts,sqs_url)
@@ -83,8 +83,8 @@ def lambda_handler(event, context):
             cfnresponse.send(event, context, cfnresponse.SUCCESS, response, "CustomResourcePhysicalID")    
         elif ('LogicalResourceId' in event) and (event['RequestType'] == 'Delete'):
             logging.info('DELETE DELETE')
-            logging.info(
-                'overriding config recorder for ALL accounts because of first run after function deployment from CloudFormation')
+            logging.warn(
+                'Initiating config recorder cleanup for ALL accounts due to CloudFormation stack deletion')
             override_config_recorder(excluded_accounts, sqs_url, '', 'Delete')
             response = {}
             ## Send signal back to CloudFormation after the final run
