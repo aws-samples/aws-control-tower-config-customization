@@ -80,7 +80,7 @@ def lambda_handler(event, context):
 
         # Describe configuration recorder
         configrecorder = configservice.describe_configuration_recorders()
-        logging.info(f'Existing Configuration Recorder :', configrecorder)
+        logging.info(f'Existing Configuration Recorder: {configrecorder}')
 
         # ControlTower created configuration recorder with name "aws-controltower-BaselineConfigRecorder" and we will update just that
         try:
@@ -110,7 +110,9 @@ def lambda_handler(event, context):
                         },
                         'recordingMode': {'recordingFrequency': 'CONTINUOUS'},
                     })
-                logging.info(f'Response for put_configuration_recorder :{response} ')
+                logging.warn(
+                    f"Configuration Recorder reset to default. Response: {json.dumps(response, default=str)}"
+                )
 
             else:
                 config_recorder = {
@@ -152,7 +154,7 @@ def lambda_handler(event, context):
             logging.info(f'Post Change Configuration recorder : {configrecorder}')
 
         except botocore.exceptions.ClientError as exe:
-            logging.error('Unable to Update Config Recorder for Account and Region : ', account_id, aws_region)
+            logging.error(f'Unable to Update Config Recorder for Account {account_id} and Region {aws_region}')
             configrecorder = configservice.describe_configuration_recorders()
             logging.info(f'Exception : {configrecorder}')
             raise exe
