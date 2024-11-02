@@ -24,6 +24,7 @@ import cfnresponse
 import os
 import logging
 import ast
+import json
 
 def lambda_handler(event, context):
     
@@ -33,11 +34,10 @@ def lambda_handler(event, context):
     try:
         logging.info('Event Data: ')
         logging.info(event)
-        sqs_url = os.getenv('SQS_URL')
+        sns_topic_arn = os.getenv('SNS_TOPIC_ARN')
         excluded_accounts = os.getenv('EXCLUDED_ACCOUNTS')
         logging.info(f'Excluded Accounts: {excluded_accounts}')
-        sqs_client = boto3.client('sqs')
-        
+
         # Check if the lambda was trigerred from EventBridge.
         # If so extract Account and Event info from the event data.
         
@@ -55,19 +55,19 @@ def lambda_handler(event, context):
         if event_source == 'aws.controltower' and event_name == 'UpdateManagedAccount':    
             account = event['detail']['serviceEventDetails']['updateManagedAccountStatus']['account']['accountId']
             logging.info(f'overriding config recorder for SINGLE account: {account}')
-            override_config_recorder(excluded_accounts, sqs_url, account, 'controltower')
+            override_config_recorder(excluded_accounts, sns_topic_arn, account, 'controltower')
         elif event_source == 'aws.controltower' and event_name == 'CreateManagedAccount':  
             account = event['detail']['serviceEventDetails']['createManagedAccountStatus']['account']['accountId']
             logging.info(f'overriding config recorder for SINGLE account: {account}')
-            override_config_recorder(excluded_accounts, sqs_url, account, 'controltower')
+            override_config_recorder(excluded_accounts, sns_topic_arn, account, 'controltower')
         elif event_source == 'aws.controltower' and event_name == 'UpdateLandingZone':
             logging.info('overriding config recorder for ALL accounts due to UpdateLandingZone event')
-            override_config_recorder(excluded_accounts, sqs_url, '', 'controltower')
+            override_config_recorder(excluded_accounts, sns_topic_arn, '', 'controltower')
         elif ('LogicalResourceId' in event) and (event['RequestType'] == 'Create'):
             logging.info('CREATE CREATE')
             logging.info(
                 'overriding config recorder for ALL accounts because of first run after function deployment from CloudFormation')
-            override_config_recorder(excluded_accounts, sqs_url, '', 'Create')
+            override_config_recorder(excluded_accounts, sns_topic_arn, '', 'Create')
             response = {}
             ## Send signal back to CloudFormation after the first run
             cfnresponse.send(event, context, cfnresponse.SUCCESS, response, "CustomResourcePhysicalID")
@@ -75,9 +75,9 @@ def lambda_handler(event, context):
             logging.info('Update Update')
             logging.info(
                 'overriding config recorder for ALL accounts because of first run after function deployment from CloudFormation')
-            override_config_recorder(excluded_accounts, sqs_url, '', 'Update')
+            override_config_recorder(excluded_accounts, sns_topic_arn, '', 'Update')
             response = {}
-            update_excluded_accounts(excluded_accounts,sqs_url)
+            update_excluded_accounts(excluded_accounts, sns_topic_arn)
             
             ## Send signal back to CloudFormation after the first run
             cfnresponse.send(event, context, cfnresponse.SUCCESS, response, "CustomResourcePhysicalID")    
@@ -85,7 +85,7 @@ def lambda_handler(event, context):
             logging.info('DELETE DELETE')
             logging.info(
                 'overriding config recorder for ALL accounts because of first run after function deployment from CloudFormation')
-            override_config_recorder(excluded_accounts, sqs_url, '', 'Delete')
+            override_config_recorder(excluded_accounts, sns_topic_arn, '', 'Delete')
             response = {}
             ## Send signal back to CloudFormation after the final run
             cfnresponse.send(event, context, cfnresponse.SUCCESS, response, "CustomResourcePhysicalID")
@@ -105,7 +105,7 @@ def lambda_handler(event, context):
         logging.exception(f'{exception_type}: {exception_message}')
 
 
-def override_config_recorder(excluded_accounts, sqs_url, account, event):
+def override_config_recorder(excluded_accounts, sns_topic_arn, account, event):
     
     try:
         client = boto3.client('cloudformation')
@@ -118,45 +118,50 @@ def override_config_recorder(excluded_accounts, sqs_url, account, event):
         else:
             page_iterator = paginator.paginate(StackSetName ='AWSControlTowerBP-BASELINE-CONFIG', StackInstanceAccount=account)
             
-        sqs_client = boto3.client('sqs')
+        sns_client = boto3.client('sns')
         for page in page_iterator:
             logging.info(page)
             
             for item in page['Summaries']:
                 account = item['Account']
                 region = item['Region']
-                send_message_to_sqs(event, account, region, excluded_accounts, sqs_client, sqs_url)
+                send_message_to_sns(event, account, region, excluded_accounts, sns_client, sns_topic_arn)
                     
     except Exception as e:
         exception_type = e.__class__.__name__
         exception_message = str(e)
         logging.exception(f'{exception_type}: {exception_message}')
 
-def send_message_to_sqs(event, account, region, excluded_accounts, sqs_client, sqs_url):
+def send_message_to_sns(event, account, region, excluded_accounts, sns_client, sns_topic_arn):
     
     try:
 
         #Proceed only if the account is not excluded
         if account not in excluded_accounts:
-        
-            #construct sqs message
-            sqs_msg = f'{{"Account": "{account}", "Region": "{region}", "Event": "{event}"}}'
 
-            #send message to sqs
-            response = sqs_client.send_message(
-            QueueUrl=sqs_url,
-            MessageBody=sqs_msg)
-            logging.info(f'message sent to sqs: {sqs_msg}')
-            
-        else:    
-            logging.info(f'Account excluded: {account}')
+            #construct sns message
+            sns_msg = {
+                "Account": account,
+                "Region": region,
+                "Event": event
+            }
+
+            #send message to sns
+            response = sns_client.publish(
+                TopicArn=sns_topic_arn,
+                Message=json.dumps(sns_msg)
+            )
+            logging.info(f'message sent to sns: {sns_msg}')
+
+        else:
+            logging.info(f'Account excluded: {account}')  
                 
     except Exception as e:
         exception_type = e.__class__.__name__
         exception_message = str(e)
-        logging.exception(f'{exception_type}: {exception_message}') 
+        logging.exception(f'{exception_type}: {exception_message}')
                    
-def update_excluded_accounts(excluded_accounts,sqs_url):
+def update_excluded_accounts(excluded_accounts, sns_topic_arn):
     
     try:
         acctid = boto3.client('sts')
@@ -174,7 +179,7 @@ def update_excluded_accounts(excluded_accounts,sqs_url):
             if acctid.get_caller_identity().get('Account') != acct:
                 templist_out.append(acct)
                 logging.info(f'Delete request sent: {acct}')
-                override_config_recorder(new_excluded_accounts, sqs_url, acct, 'Delete')
+                override_config_recorder(new_excluded_accounts, sns_topic_arn, acct, 'Delete')
         
     except Exception as e:
         exception_type = e.__class__.__name__

@@ -33,7 +33,7 @@ def lambda_handler(event, context):
 
         logging.info(f'Event: {event}')
 
-        body = json.loads(event['Records'][0]['body'])
+        body = json.loads(event['Records'][0]['Sns']['Message'])
         account_id = body['Account']
         aws_region = body['Region']
         event = body['Event']
