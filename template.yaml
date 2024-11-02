@@ -58,6 +58,12 @@ Resources:
                 Bool:
                   aws:SecureTransport: false
 
+    SNSConfigRecorderTopic:
+        Type: AWS::SNS::Topic
+        DeletionPolicy: Retain
+        Properties:
+          DisplayName: "Config Recorder Topic"
+
     ProducerLambda:
         Type: AWS::Lambda::Function
         DeletionPolicy: Retain
@@ -78,7 +84,7 @@ Resources:
                 Variables:
                     EXCLUDED_ACCOUNTS: !Ref ExcludedAccounts
                     LOG_LEVEL: INFO
-                    SQS_URL: !Ref SQSConfigRecorder
+                    SNS_TOPIC_ARN: !GetAtt SNSConfigRecorderTopic.TopicArn
 
     ProducerLambdaPermissions:                
       Type: AWS::Lambda::Permission
@@ -111,16 +117,8 @@ Resources:
                     CONFIG_RECORDER_OVERRIDE_DAILY_RESOURCE_LIST: !Ref ConfigRecorderDailyResourceTypes
                     CONFIG_RECORDER_OVERRIDE_EXCLUDED_RESOURCE_LIST: !Ref ConfigRecorderExcludedResourceTypes
                     CONFIG_RECORDER_DEFAULT_RECORDING_FREQUENCY: !Ref ConfigRecorderDefaultRecordingFrequency
+                    SNS_TOPIC_ARN: !GetAtt SNSConfigRecorderTopic.TopicArn
 
-    ConsumerLambdaEventSourceMapping:
-        Type: AWS::Lambda::EventSourceMapping
-        DeletionPolicy: Retain
-        Properties:
-          BatchSize: 1
-          Enabled: true
-          EventSourceArn: !GetAtt SQSConfigRecorder.Arn
-          FunctionName: !GetAtt ConsumerLambda.Arn                
-    
     ProducerLambdaExecutionRole:
         Type: 'AWS::IAM::Role'
         DeletionPolicy: Retain
@@ -148,12 +146,9 @@ Resources:
                     Resource: !Sub 'arn:${AWS::Partition}:cloudformation:*:*:stackset/AWSControlTowerBP-BASELINE-CONFIG:*'
                   - Effect: Allow
                     Action:
-                      - sqs:DeleteMessage
-                      - sqs:ReceiveMessage
-                      - sqs:SendMessage
-                      - sqs:GetQueueAttributes
-                    Resource: !GetAtt SQSConfigRecorder.Arn  
-                    
+                      - sns:Publish
+                    Resource: !GetAtt SNSConfigRecorderTopic.TopicArn
+
     ConsumerLambdaExecutionRole:
         Type: 'AWS::IAM::Role'
         DeletionPolicy: Retain
@@ -181,19 +176,9 @@ Resources:
                     Resource: "*"
                   - Effect: Allow
                     Action:
-                      - sqs:DeleteMessage
-                      - sqs:ReceiveMessage
-                      - sqs:SendMessage
-                      - sqs:GetQueueAttributes
-                    Resource: !GetAtt SQSConfigRecorder.Arn   
-
-    SQSConfigRecorder:
-        Type: AWS::SQS::Queue
-        DeletionPolicy: Retain
-        Properties:
-            VisibilityTimeout: 180
-            DelaySeconds: 5
-            KmsMasterKeyId: alias/aws/sqs
+                      - sns:Subscribe
+                      - sns:Receive
+                    Resource: !Ref SNSConfigRecorderTopic
 
     ProducerEventTrigger:
         Type: AWS::Events::Rule
@@ -207,7 +192,7 @@ Resources:
                             "eventName": ["UpdateLandingZone", "CreateManagedAccount", "UpdateManagedAccount"]
                           }
                         }'
-          Name: !GetAtt SQSConfigRecorder.QueueName 
+          Name: "ConfigRecorderProducerEventTrigger"
           State: ENABLED
           Targets: 
             - 
@@ -325,3 +310,10 @@ Resources:
                 finally:
                     timer.cancel()
                     cfnresponse.send(event, context, status, {}, None)
+
+    ConsumerLambdaSubscription:
+        Type: AWS::SNS::Subscription
+        Properties:
+          Protocol: lambda
+          Endpoint: !GetAtt ConsumerLambda.Arn
+          TopicArn: !GetAtt SNSConfigRecorderTopic.TopicArn
