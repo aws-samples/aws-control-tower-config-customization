@@ -99,6 +99,7 @@ def lambda_handler(event, context):
             CONFIG_RECORDER_OVERRIDE_DAILY_RESOURCE_LIST[:] = res
 
             # Event = Delete is when stack is deleted, we rollback changed made and leave it as ControlTower Intended
+            home_region = os.getenv('CONTROL_TOWER_HOME_REGION') == aws_region
             if event == 'Delete':
                 response = configservice.put_configuration_recorder(
                     ConfigurationRecorder={
@@ -106,7 +107,7 @@ def lambda_handler(event, context):
                         'roleARN': role_arn,
                         'recordingGroup': {
                             'allSupported': True,
-                            'includeGlobalResourceTypes': True if os.getenv('CONTROL_TOWER_HOME_REGION') == aws_region else False
+                            'includeGlobalResourceTypes': home_region
                         }
                     })
                 logging.info(f'Response for put_configuration_recorder :{response} ')
