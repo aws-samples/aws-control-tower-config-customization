@@ -106,7 +106,7 @@ def lambda_handler(event, context):
                         'roleARN': role_arn,
                         'recordingGroup': {
                             'allSupported': True,
-                            'includeGlobalResourceTypes': False
+                            'includeGlobalResourceTypes': True if os.getenv('CONTROL_TOWER_HOME_REGION') == aws_region else False
                         }
                     })
                 logging.info(f'Response for put_configuration_recorder :{response} ')
