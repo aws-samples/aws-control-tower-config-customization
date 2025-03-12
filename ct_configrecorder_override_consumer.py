@@ -118,7 +118,7 @@ def lambda_handler(event, context):
                     'roleARN': role_arn,
                     'recordingGroup': {
                         'allSupported': False,
-                        'includeGlobalResourceTypes': False,
+                        'includeGlobalResourceTypes': home_region,
                         'exclusionByResourceTypes': {
                             'resourceTypes': CONFIG_RECORDER_EXCLUSION_RESOURCE_LIST
                         },
