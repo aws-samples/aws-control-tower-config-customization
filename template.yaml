@@ -19,6 +19,11 @@ Parameters:
     Default: "AWS::AutoScaling::AutoScalingGroup,AWS::AutoScaling::LaunchConfiguration"
     Type: String
 
+  ConfigRecorderDailyGlobalResourceTypes:
+    Description: List of Global resource types to be set to a daily cadence in the AWS Control Tower home region
+    Default: "AWS::IAM::Policy,AWS::IAM::User,AWS::IAM::Role,AWS::IAM::Group"
+    Type: String
+
   ConfigRecorderDefaultRecordingFrequency:
     Description: Default Frequency of recording configuration changes.
     Default: CONTINUOUS
@@ -109,6 +114,7 @@ Resources:
                 Variables:
                     LOG_LEVEL: INFO
                     CONFIG_RECORDER_OVERRIDE_DAILY_RESOURCE_LIST: !Ref ConfigRecorderDailyResourceTypes
+                    CONFIG_RECORDER_OVERRIDE_DAILY_GLOBAL_RESOURCE_LIST: !Ref ConfigRecorderDailyGlobalResourceTypes
                     CONFIG_RECORDER_OVERRIDE_EXCLUDED_RESOURCE_LIST: !Ref ConfigRecorderExcludedResourceTypes
                     CONFIG_RECORDER_DEFAULT_RECORDING_FREQUENCY: !Ref ConfigRecorderDefaultRecordingFrequency
                     CONTROL_TOWER_HOME_REGION: !Ref 'AWS::Region'
