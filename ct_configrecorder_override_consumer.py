@@ -80,7 +80,13 @@ def lambda_handler(event, context):
 
         # Describe configuration recorder
         configrecorder = configservice.describe_configuration_recorders()
-        logging.info(f'Existing Configuration Recorder :', configrecorder)
+        logging.info(f'Existing Configuration Recorder: {configrecorder}')
+
+        # Get the name of the existing recorder if it exists, otherwise use the default name
+        recorder_name = 'aws-controltower-BaselineConfigRecorder'
+        if configrecorder and 'ConfigurationRecorders' in configrecorder and len(configrecorder['ConfigurationRecorders']) > 0:
+            recorder_name = configrecorder['ConfigurationRecorders'][0]['name']
+            logging.info(f'Using existing recorder name: {recorder_name}')
 
         # ControlTower created configuration recorder with name "aws-controltower-BaselineConfigRecorder" and we will update just that
         try:
@@ -112,7 +118,7 @@ def lambda_handler(event, context):
             if event == 'Delete':
                 response = configservice.put_configuration_recorder(
                     ConfigurationRecorder={
-                        'name': 'aws-controltower-BaselineConfigRecorder',
+                        'name': recorder_name,
                         'roleARN': role_arn,
                         'recordingGroup': {
                             'allSupported': True,
@@ -123,7 +129,7 @@ def lambda_handler(event, context):
 
             else:
                 config_recorder = {
-                    'name': 'aws-controltower-BaselineConfigRecorder',
+                    'name': recorder_name,
                     'roleARN': role_arn,
                     'recordingGroup': {
                         'allSupported': False,
