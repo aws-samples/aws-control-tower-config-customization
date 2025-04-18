@@ -89,6 +89,12 @@ def lambda_handler(event, context):
             CONFIG_RECORDER_DAILY_RESOURCE_STRING = os.getenv('CONFIG_RECORDER_OVERRIDE_DAILY_RESOURCE_LIST')
             CONFIG_RECORDER_OVERRIDE_DAILY_RESOURCE_LIST = CONFIG_RECORDER_DAILY_RESOURCE_STRING.split(
                 ',') if CONFIG_RECORDER_DAILY_RESOURCE_STRING != '' else []
+            
+            CONFIG_RECORDER_DAILY_GLOBAL_RESOURCE_STRING = os.getenv('CONFIG_RECORDER_OVERRIDE_DAILY_GLOBAL_RESOURCE_LIST')
+            CONFIG_RECORDER_DAILY_GLOBAL_RESOURCE_LIST = CONFIG_RECORDER_DAILY_GLOBAL_RESOURCE_STRING.split(
+                ',') if CONFIG_RECORDER_DAILY_GLOBAL_RESOURCE_STRING != '' else []
+            
+                        
             CONFIG_RECORDER_EXCLUSION_RESOURCE_STRING = os.getenv('CONFIG_RECORDER_OVERRIDE_EXCLUDED_RESOURCE_LIST')
             CONFIG_RECORDER_EXCLUSION_RESOURCE_LIST = CONFIG_RECORDER_EXCLUSION_RESOURCE_STRING.split(
                 ',') if CONFIG_RECORDER_EXCLUSION_RESOURCE_STRING != '' else []
@@ -99,6 +105,10 @@ def lambda_handler(event, context):
             CONFIG_RECORDER_OVERRIDE_DAILY_RESOURCE_LIST[:] = res
 
             # Event = Delete is when stack is deleted, we rollback changed made and leave it as ControlTower Intended
+            home_region = os.getenv('CONTROL_TOWER_HOME_REGION') == aws_region
+            if home_region:
+                CONFIG_RECORDER_OVERRIDE_DAILY_RESOURCE_LIST += CONFIG_RECORDER_DAILY_GLOBAL_RESOURCE_LIST
+
             if event == 'Delete':
                 response = configservice.put_configuration_recorder(
                     ConfigurationRecorder={
@@ -106,7 +116,7 @@ def lambda_handler(event, context):
                         'roleARN': role_arn,
                         'recordingGroup': {
                             'allSupported': True,
-                            'includeGlobalResourceTypes': False
+                            'includeGlobalResourceTypes': home_region
                         }
                     })
                 logging.info(f'Response for put_configuration_recorder :{response} ')
