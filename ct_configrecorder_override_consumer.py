@@ -92,6 +92,9 @@ def lambda_handler(event, context):
         try:
             role_arn = 'arn:aws:iam::' + account_id + ':role/aws-service-role/config.amazonaws.com/AWSServiceRoleForConfig'
 
+            ## added IAM global resource list
+            GLOBAL_IAM_RESOURCE_LIST = ['AWS::IAM::Group','AWS::IAM::Policy','AWS::IAM::Role','AWS::IAM::User']
+
             CONFIG_RECORDER_DAILY_RESOURCE_STRING = os.getenv('CONFIG_RECORDER_OVERRIDE_DAILY_RESOURCE_LIST')
             CONFIG_RECORDER_OVERRIDE_DAILY_RESOURCE_LIST = CONFIG_RECORDER_DAILY_RESOURCE_STRING.split(
                 ',') if CONFIG_RECORDER_DAILY_RESOURCE_STRING != '' else []
@@ -109,6 +112,18 @@ def lambda_handler(event, context):
             #remove any resource type from daily list that are in exclision list
             res = [x for x in CONFIG_RECORDER_OVERRIDE_DAILY_RESOURCE_LIST if x not in CONFIG_RECORDER_EXCLUSION_RESOURCE_LIST]
             CONFIG_RECORDER_OVERRIDE_DAILY_RESOURCE_LIST[:] = res
+
+            ## create two new lists - NOT_HOME and HOME
+            CONFIG_RECORDER_EXCLUSION_RESOURCE_LIST_NOT_HOME = []
+            CONFIG_RECORDER_EXCLUSION_RESOURCE_LIST_HOME = []
+
+            ## remove any of the global IAM resources from exclusion list for HOME region
+            home = [x for x in CONFIG_RECORDER_EXCLUSION_RESOURCE_LIST if x not in GLOBAL_IAM_RESOURCE_LIST]
+            CONFIG_RECORDER_EXCLUSION_RESOURCE_LIST_HOME[:] = home
+            ## take home list and add globals for NOT_HOME exclusion list for linked regions
+            CONFIG_RECORDER_EXCLUSION_RESOURCE_LIST_NOT_HOME = home + GLOBAL_IAM_RESOURCE_LIST
+
+            home_region = os.getenv('CONTROL_TOWER_HOME_REGION') == aws_region
 
             # Event = Delete is when stack is deleted, we rollback changed made and leave it as ControlTower Intended
             home_region = os.getenv('CONTROL_TOWER_HOME_REGION') == aws_region
@@ -135,7 +150,8 @@ def lambda_handler(event, context):
                         'allSupported': False,
                         'includeGlobalResourceTypes': False,
                         'exclusionByResourceTypes': {
-                            'resourceTypes': CONFIG_RECORDER_EXCLUSION_RESOURCE_LIST
+                        ## for exclusion list exclusionByResourceTypes.resourceTypes: if home_region==true use home, else use not_home
+                            'resourceTypes': CONFIG_RECORDER_EXCLUSION_RESOURCE_LIST_HOME if home_region == True else CONFIG_RECORDER_EXCLUSION_RESOURCE_LIST_NOT_HOME
                         },
                         'recordingStrategy': {
                             'useOnly': 'EXCLUSION_BY_RESOURCE_TYPES'
