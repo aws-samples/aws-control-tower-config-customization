@@ -9,9 +9,22 @@ Parameters:
     MinLength: '36'
     Type: String
 
+  ConfigRecorderStrategy:
+    Default: EXCLUSION
+    Description: Config Recorder Strategy
+    Type: String
+    AllowedValues:
+      - EXCLUSION
+      - INCLUSION
+
   ConfigRecorderExcludedResourceTypes:
-    Description: List of all resource types to be excluded from Config Recorder
+    Description: List of all resource types to be excluded from Config Recorder if you pick EXCLUSION strategy
     Default: "AWS::HealthLake::FHIRDatastore,AWS::Pinpoint::Segment,AWS::Pinpoint::ApplicationSettings"
+    Type: String
+
+  ConfigRecorderIncludedResourceTypes:
+    Description: List of all resource types to be included in Config Recorder if you pick INCLUSION strategy
+    Default: "AWS::S3::Bucket,AWS::CloudTrail::Trail"
     Type: String
 
   ConfigRecorderDailyResourceTypes:
@@ -113,9 +126,11 @@ Resources:
             Environment:
                 Variables:
                     LOG_LEVEL: INFO
+                    CONFIG_RECORDER_STRATEGY: !Ref ConfigRecorderStrategy
                     CONFIG_RECORDER_OVERRIDE_DAILY_RESOURCE_LIST: !Ref ConfigRecorderDailyResourceTypes
                     CONFIG_RECORDER_OVERRIDE_DAILY_GLOBAL_RESOURCE_LIST: !Ref ConfigRecorderDailyGlobalResourceTypes
                     CONFIG_RECORDER_OVERRIDE_EXCLUDED_RESOURCE_LIST: !Ref ConfigRecorderExcludedResourceTypes
+                    CONFIG_RECORDER_OVERRIDE_INCLUDED_RESOURCE_LIST: !Ref ConfigRecorderIncludedResourceTypes
                     CONFIG_RECORDER_DEFAULT_RECORDING_FREQUENCY: !Ref ConfigRecorderDefaultRecordingFrequency
                     CONTROL_TOWER_HOME_REGION: !Ref 'AWS::Region'
 

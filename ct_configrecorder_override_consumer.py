@@ -30,7 +30,6 @@ def lambda_handler(event, context):
     logging.getLogger().setLevel(LOG_LEVEL)
 
     try:
-
         logging.info(f'Event: {event}')
 
         body = json.loads(event['Records'][0]['body'])
@@ -92,23 +91,37 @@ def lambda_handler(event, context):
         try:
             role_arn = 'arn:aws:iam::' + account_id + ':role/aws-service-role/config.amazonaws.com/AWSServiceRoleForConfig'
 
-            CONFIG_RECORDER_DAILY_RESOURCE_STRING = os.getenv('CONFIG_RECORDER_OVERRIDE_DAILY_RESOURCE_LIST')
+            CONFIG_RECORDER_DAILY_RESOURCE_STRING = os.getenv('CONFIG_RECORDER_OVERRIDE_DAILY_RESOURCE_LIST', '')
             CONFIG_RECORDER_OVERRIDE_DAILY_RESOURCE_LIST = CONFIG_RECORDER_DAILY_RESOURCE_STRING.split(
                 ',') if CONFIG_RECORDER_DAILY_RESOURCE_STRING != '' else []
             
-            CONFIG_RECORDER_DAILY_GLOBAL_RESOURCE_STRING = os.getenv('CONFIG_RECORDER_OVERRIDE_DAILY_GLOBAL_RESOURCE_LIST')
+            CONFIG_RECORDER_DAILY_GLOBAL_RESOURCE_STRING = os.getenv('CONFIG_RECORDER_OVERRIDE_DAILY_GLOBAL_RESOURCE_LIST', '')
             CONFIG_RECORDER_DAILY_GLOBAL_RESOURCE_LIST = CONFIG_RECORDER_DAILY_GLOBAL_RESOURCE_STRING.split(
                 ',') if CONFIG_RECORDER_DAILY_GLOBAL_RESOURCE_STRING != '' else []
             
-                        
-            CONFIG_RECORDER_EXCLUSION_RESOURCE_STRING = os.getenv('CONFIG_RECORDER_OVERRIDE_EXCLUDED_RESOURCE_LIST')
+            # Get resource lists for both strategies
+            CONFIG_RECORDER_STRATEGY = os.getenv('CONFIG_RECORDER_STRATEGY', 'EXCLUSION')
+            
+            # Get exclusion list (original behavior)
+            CONFIG_RECORDER_EXCLUSION_RESOURCE_STRING = os.getenv('CONFIG_RECORDER_OVERRIDE_EXCLUDED_RESOURCE_LIST', '')
             CONFIG_RECORDER_EXCLUSION_RESOURCE_LIST = CONFIG_RECORDER_EXCLUSION_RESOURCE_STRING.split(
                 ',') if CONFIG_RECORDER_EXCLUSION_RESOURCE_STRING != '' else []
+            
+            # Get inclusion list (new behavior)
+            CONFIG_RECORDER_INCLUSION_RESOURCE_STRING = os.getenv('CONFIG_RECORDER_OVERRIDE_INCLUDED_RESOURCE_LIST', '')
+            CONFIG_RECORDER_INCLUSION_RESOURCE_LIST = CONFIG_RECORDER_INCLUSION_RESOURCE_STRING.split(
+                ',') if CONFIG_RECORDER_INCLUSION_RESOURCE_STRING != '' else []
+            
             CONFIG_RECORDER_DEFAULT_RECORDING_FREQUENCY = os.getenv('CONFIG_RECORDER_DEFAULT_RECORDING_FREQUENCY')
 
-            #remove any resource type from daily list that are in exclision list
-            res = [x for x in CONFIG_RECORDER_OVERRIDE_DAILY_RESOURCE_LIST if x not in CONFIG_RECORDER_EXCLUSION_RESOURCE_LIST]
-            CONFIG_RECORDER_OVERRIDE_DAILY_RESOURCE_LIST[:] = res
+            # For exclusion strategy, remove any resource type from daily list that are in exclusion list
+            if CONFIG_RECORDER_STRATEGY == 'EXCLUSION':
+                res = [x for x in CONFIG_RECORDER_OVERRIDE_DAILY_RESOURCE_LIST if x not in CONFIG_RECORDER_EXCLUSION_RESOURCE_LIST]
+                CONFIG_RECORDER_OVERRIDE_DAILY_RESOURCE_LIST[:] = res
+            else:  # For inclusion strategy, make sure all daily resources are in the inclusion list
+                for resource_type in CONFIG_RECORDER_OVERRIDE_DAILY_RESOURCE_LIST:
+                    if resource_type not in CONFIG_RECORDER_INCLUSION_RESOURCE_LIST:
+                        CONFIG_RECORDER_INCLUSION_RESOURCE_LIST.append(resource_type)
 
             # Event = Delete is when stack is deleted, we rollback changed made and leave it as ControlTower Intended
             home_region = os.getenv('CONTROL_TOWER_HOME_REGION') == aws_region
@@ -128,36 +141,87 @@ def lambda_handler(event, context):
                 logging.info(f'Response for put_configuration_recorder :{response} ')
 
             else:
-                config_recorder = {
-                    'name': recorder_name,
-                    'roleARN': role_arn,
-                    'recordingGroup': {
-                        'allSupported': False,
-                        'includeGlobalResourceTypes': False,
-                        'exclusionByResourceTypes': {
-                            'resourceTypes': CONFIG_RECORDER_EXCLUSION_RESOURCE_LIST
-                        },
-                        'recordingStrategy': {
-                            'useOnly': 'EXCLUSION_BY_RESOURCE_TYPES'
-                        }
-                    },
-                    'recordingMode': {
-                        'recordingFrequency': CONFIG_RECORDER_DEFAULT_RECORDING_FREQUENCY,
-                        'recordingModeOverrides': [
-                            {
-                                'description': 'DAILY_OVERRIDE',
-                                'resourceTypes': CONFIG_RECORDER_OVERRIDE_DAILY_RESOURCE_LIST,
-                                'recordingFrequency': 'DAILY'
+                if CONFIG_RECORDER_STRATEGY == 'EXCLUSION':
+                    # Original exclusion-based code - EXACTLY as in the working version
+                    logging.info(f'Using EXCLUSION strategy')
+                    logging.info(f'Exclusion resource list: {CONFIG_RECORDER_EXCLUSION_RESOURCE_LIST}')
+                    logging.info(f'Daily override resource list: {CONFIG_RECORDER_OVERRIDE_DAILY_RESOURCE_LIST}')
+                    
+                    config_recorder = {
+                        'name': recorder_name,
+                        'roleARN': role_arn,
+                        'recordingGroup': {
+                            'allSupported': False,
+                            'includeGlobalResourceTypes': False,
+                            'exclusionByResourceTypes': {
+                                'resourceTypes': CONFIG_RECORDER_EXCLUSION_RESOURCE_LIST
+                            },
+                            'recordingStrategy': {
+                                'useOnly': 'EXCLUSION_BY_RESOURCE_TYPES'
                             }
-                        ] if CONFIG_RECORDER_OVERRIDE_DAILY_RESOURCE_LIST else []
+                        },
+                        'recordingMode': {
+                            'recordingFrequency': CONFIG_RECORDER_DEFAULT_RECORDING_FREQUENCY,
+                            'recordingModeOverrides': [
+                                {
+                                    'description': 'DAILY_OVERRIDE',
+                                    'resourceTypes': CONFIG_RECORDER_OVERRIDE_DAILY_RESOURCE_LIST,
+                                    'recordingFrequency': 'DAILY'
+                                }
+                            ] if CONFIG_RECORDER_OVERRIDE_DAILY_RESOURCE_LIST else []
+                        }
                     }
-                }
 
-                if not CONFIG_RECORDER_EXCLUSION_RESOURCE_LIST:
-                    config_recorder['recordingGroup'].pop('exclusionByResourceTypes')
-                    config_recorder['recordingGroup'].pop('recordingStrategy')
-                    config_recorder['recordingGroup']['allSupported'] = True
-                    config_recorder['recordingGroup']['includeGlobalResourceTypes'] = True
+                    if not CONFIG_RECORDER_EXCLUSION_RESOURCE_LIST:
+                        config_recorder['recordingGroup'].pop('exclusionByResourceTypes')
+                        config_recorder['recordingGroup'].pop('recordingStrategy')
+                        config_recorder['recordingGroup']['allSupported'] = True
+                        config_recorder['recordingGroup']['includeGlobalResourceTypes'] = True
+                else:
+                    # New inclusion-based code
+                    logging.info(f'Using INCLUSION strategy')
+                    # Make sure all resources in daily overrides are also in the inclusion list
+                    for resource_type in CONFIG_RECORDER_OVERRIDE_DAILY_RESOURCE_LIST:
+                        if resource_type not in CONFIG_RECORDER_INCLUSION_RESOURCE_LIST:
+                            CONFIG_RECORDER_INCLUSION_RESOURCE_LIST.append(resource_type)
+   
+                    logging.info(f'Inclusion resource list: {CONFIG_RECORDER_INCLUSION_RESOURCE_LIST}')
+                    logging.info(f'Daily override resource list: {CONFIG_RECORDER_OVERRIDE_DAILY_RESOURCE_LIST}')
+                    
+                    config_recorder = {
+                        'name': recorder_name,
+                        'roleARN': role_arn
+                    }
+                    
+                    # Set up recording group
+                    if not CONFIG_RECORDER_INCLUSION_RESOURCE_LIST:
+                        config_recorder['recordingGroup'] = {
+                            'allSupported': False,
+                            'includeGlobalResourceTypes': False
+                        }
+                    else:
+                        config_recorder['recordingGroup'] = {
+                            'allSupported': False,
+                            'includeGlobalResourceTypes': False,
+                            'resourceTypes': CONFIG_RECORDER_INCLUSION_RESOURCE_LIST,
+                            'recordingStrategy': {
+                                'useOnly': 'INCLUSION_BY_RESOURCE_TYPES'
+                            }
+                        }
+                    
+                    # Set up recording mode only if we have daily overrides
+                    if CONFIG_RECORDER_OVERRIDE_DAILY_RESOURCE_LIST:
+                        config_recorder['recordingMode'] = {
+                            'recordingFrequency': CONFIG_RECORDER_DEFAULT_RECORDING_FREQUENCY,
+                            'recordingModeOverrides': [
+                                {
+                                    'description': 'DAILY_OVERRIDE',
+                                    'resourceTypes': CONFIG_RECORDER_OVERRIDE_DAILY_RESOURCE_LIST,
+                                    'recordingFrequency': 'DAILY'
+                                }
+                            ]
+                        }
+
                 response = configservice.put_configuration_recorder(
                     ConfigurationRecorder=config_recorder)
                 logging.info(f'Response for put_configuration_recorder :{response} ')
