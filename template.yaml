@@ -32,6 +32,16 @@ Parameters:
       - CONTINUOUS
       - DAILY
 
+  ConfigRecorderSpecialExcludedAccounts:
+    Description: Comma-separated list of accounts to apply special exclusions
+    Default: "111111111111,222222222222,333333333333,444444444444,555555555555"
+    Type: String
+
+  ConfigRecorderOverrideSpecialExcludedResourceList:
+    Description: Comma-separated list of resource types to exclude for the special accounts
+    Default: "AWS::EC2::Volume,AWS::EC2::NetworkInterface"
+    Type: String
+    
   CloudFormationVersion:
     Type: String
     Default: 1
@@ -118,6 +128,8 @@ Resources:
                     CONFIG_RECORDER_OVERRIDE_EXCLUDED_RESOURCE_LIST: !Ref ConfigRecorderExcludedResourceTypes
                     CONFIG_RECORDER_DEFAULT_RECORDING_FREQUENCY: !Ref ConfigRecorderDefaultRecordingFrequency
                     CONTROL_TOWER_HOME_REGION: !Ref 'AWS::Region'
+                    CONFIG_RECORDER_SPECIAL_EXCLUDED_ACCOUNTS: !Ref ConfigRecorderSpecialExcludedAccounts
+                    CONFIG_RECORDER_OVERRIDE_SPECIAL_EXCLUDED_RESOURCE_LIST: !Ref ConfigRecorderOverrideSpecialExcludedResourceList
 
     ConsumerLambdaEventSourceMapping:
         Type: AWS::Lambda::EventSourceMapping
