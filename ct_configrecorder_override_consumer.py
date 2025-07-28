@@ -30,16 +30,16 @@ def lambda_handler(event, context):
     logging.getLogger().setLevel(LOG_LEVEL)
 
     try:
-        logging.info(f'Event: {event}')
+        logging.info(f'Event: {str(event).replace(chr(10), "").replace(chr(13), "")}')
 
         body = json.loads(event['Records'][0]['body'])
         account_id = body['Account']
         aws_region = body['Region']
         event = body['Event']
 
-        logging.info(f'Extracted Account: {account_id}')
-        logging.info(f'Extracted Region: {aws_region}')
-        logging.info(f'Extracted Event: {event}')
+        logging.info(f'Extracted Account: {str(account_id).replace(chr(10), "").replace(chr(13), "")}')
+        logging.info(f'Extracted Region: {str(aws_region).replace(chr(10), "").replace(chr(13), "")}')
+        logging.info(f'Extracted Event: {str(event).replace(chr(10), "").replace(chr(13), "")}')
 
         bc = botocore.__version__
         b3 = boto3.__version__
