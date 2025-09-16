@@ -127,6 +127,12 @@ def lambda_handler(event, context):
             home_region = os.getenv('CONTROL_TOWER_HOME_REGION') == aws_region
             if home_region:
                 CONFIG_RECORDER_OVERRIDE_DAILY_RESOURCE_LIST += CONFIG_RECORDER_DAILY_GLOBAL_RESOURCE_LIST
+            else:
+                # For non-home regions, add global resources to the exclusion list to prevent them from being recorded.
+                # This only applies if the strategy is EXCLUSION.
+                if CONFIG_RECORDER_STRATEGY == 'EXCLUSION':
+                    CONFIG_RECORDER_EXCLUSION_RESOURCE_LIST.extend(CONFIG_RECORDER_DAILY_GLOBAL_RESOURCE_LIST)
+                    CONFIG_RECORDER_EXCLUSION_RESOURCE_LIST = list(set(CONFIG_RECORDER_EXCLUSION_RESOURCE_LIST))
 
             if event == 'Delete':
                 response = configservice.put_configuration_recorder(
