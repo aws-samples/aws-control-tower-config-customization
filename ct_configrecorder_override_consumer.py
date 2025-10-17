@@ -18,11 +18,12 @@
 # IN THE SOFTWARE.
 #
 
-import boto3
 import json
 import logging
-import botocore.exceptions
 import os
+
+import boto3
+import botocore.exceptions
 
 
 def lambda_handler(event, context):
@@ -135,21 +136,16 @@ def lambda_handler(event, context):
                         'roleARN': role_arn,
                         'recordingGroup': {
                             'allSupported': True,
-<<<<<<< HEAD
-                            'includeGlobalResourceTypes': False
+                            'includeGlobalResourceTypes': home_region
                         },
                         'recordingMode': {'recordingFrequency': 'CONTINUOUS'},
-=======
-                            'includeGlobalResourceTypes': home_region
-                        }
->>>>>>> upstream/main
                     })
                 logging.info(f'Response for put_configuration_recorder :{response} ')
 
             else:
                 if CONFIG_RECORDER_STRATEGY == 'EXCLUSION':
                     # Original exclusion-based code - EXACTLY as in the working version
-                    logging.info(f'Using EXCLUSION strategy')
+                    logging.info('Using EXCLUSION strategy')
                     logging.info(f'Exclusion resource list: {CONFIG_RECORDER_EXCLUSION_RESOURCE_LIST}')
                     logging.info(f'Daily override resource list: {CONFIG_RECORDER_OVERRIDE_DAILY_RESOURCE_LIST}')
                     
@@ -185,7 +181,7 @@ def lambda_handler(event, context):
                         config_recorder['recordingGroup']['includeGlobalResourceTypes'] = True
                 else:
                     # New inclusion-based code
-                    logging.info(f'Using INCLUSION strategy')
+                    logging.info('Using INCLUSION strategy')
                     # Make sure all resources in daily overrides are also in the inclusion list
                     for resource_type in CONFIG_RECORDER_OVERRIDE_DAILY_RESOURCE_LIST:
                         if resource_type not in CONFIG_RECORDER_INCLUSION_RESOURCE_LIST:
