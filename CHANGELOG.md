@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - Corrected incorrect log lines in consumer and producer Lambda functions ([#33](https://github.com/aws-samples/aws-control-tower-config-customization/pull/33))
+- Fixed STS client to use regional endpoints for opt-in regions support - prevents `UnrecognizedClientException` in opt-in regions (me-south-1, ap-east-1, etc.)
 
 ### Documentation
 - Added comprehensive "Resource Retention After Stack Deletion" section to README
@@ -24,7 +25,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added manual cleanup instructions for retained resources
 - Clarified that retention prevents race conditions during config rollback operations
 
-## [1.0.0] - Initial Release
+## [1.0.0] - 2024
+
+### Added
+- Flexibility for AWS Config recording strategies supporting both INCLUSION and EXCLUSION lists for resource types
+- `ConfigRecorderIncludedResourceTypes` parameter for inclusion-based recording
+- `ConfigRecorderExcludedResourceTypes` parameter for exclusion-based recording
+- Support for daily recording frequency for specific resource types ([#13](https://github.com/aws-samples/aws-control-tower-config-customization/pull/13))
+- `ConfigRecorderDailyResourceTypes` parameter for resources recorded on daily cadence
+- `ConfigRecorderDailyGlobalResourceTypes` parameter for global resources in Control Tower home region
+- `ConfigRecorderDefaultRecordingFrequency` parameter (CONTINUOUS or DAILY)
+
+### Fixed
+- Maximum number of configuration recorders exceeded exception by using existing recorder name ([#24](https://github.com/aws-samples/aws-control-tower-config-customization/pull/24))
+- Global resource recording now correctly limited to Control Tower home region ([#19](https://github.com/aws-samples/aws-control-tower-config-customization/pull/19))
+- `includeGlobalResourceTypes` value properly set to true only in home region
+
+### Changed
+- Updated IAM role handling for configuration recorder
+
+## [0.1.0] - Initial Release
 
 ### Added
 - Initial CloudFormation template for AWS Config resource tracking customization in Control Tower environments
@@ -33,6 +53,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - SQS queue for event processing
 - IAM roles and permissions for Lambda execution
 - EventBridge rule for triggering on Control Tower lifecycle events
-- Support for EXCLUSION and INCLUSION recording strategies
-- Support for daily recording frequency for specific resource types
+- Support for resource exclusion in Config Recorder
 - Configurable excluded accounts list

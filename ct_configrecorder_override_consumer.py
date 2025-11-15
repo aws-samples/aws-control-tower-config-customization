@@ -47,7 +47,7 @@ def lambda_handler(event, context):
         logging.info(f'Botocore : {bc}')
         logging.info(f'Boto3 : {b3}')
 
-        STS = boto3.client("sts")
+        STS = boto3.client("sts", region_name=aws_region)
 
         def assume_role(account_id, role='AWSControlTowerExecution'):
             '''
