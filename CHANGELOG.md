@@ -15,6 +15,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Updated ProducerEventTrigger EventPattern to include `ResetLandingZone` event alongside existing triggers (`UpdateLandingZone`, `CreateManagedAccount`, `UpdateManagedAccount`)
 
+### Fixed
+- Corrected incorrect log lines in consumer and producer Lambda functions ([#33](https://github.com/aws-samples/aws-control-tower-config-customization/pull/33))
+
 ### Documentation
 - Added comprehensive "Resource Retention After Stack Deletion" section to README
 - Documented all 6 resources with DeletionPolicy: Retain (Lambda Functions, IAM Roles, SQS Queue, Lambda Permissions, Event Source Mapping)
