@@ -252,7 +252,7 @@ Resources:
         "source": ["aws.controltower"],
         "detail-type": ["AWS Service Event via CloudTrail"],
         "detail": {
-        "eventName": ["UpdateLandingZone", "CreateManagedAccount", "UpdateManagedAccount"]
+        "eventName": ["UpdateLandingZone", "CreateManagedAccount", "UpdateManagedAccount", "ResetLandingZone"]
         }
         }'
       Name: !GetAtt SQSConfigRecorder.QueueName
