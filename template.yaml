@@ -7,7 +7,7 @@ Parameters:
     Default: 1
 
   AccountSelectionMode:
-    Description: Account selection mode - EXCLUSION (default) or INCLUSION
+    Description: Account selection mode - EXCLUSION (processes all accounts except those in ExcludedAccounts) or INCLUSION (processes only accounts in IncludedAccounts). Default is EXCLUSION for backward compatibility.
     Type: String
     Default: EXCLUSION
     AllowedValues:
@@ -16,15 +16,15 @@ Parameters:
 
   ExcludedAccounts:
     Description: Excluded Accounts list. This list should contain Management account, Log Archive and Audit accounts at the minimum and other accounts you want to be excluded. Only used when AccountSelectionMode is EXCLUSION.
-    Default: "['111111111111', '222222222222', '333333333333']"
-    MaxLength: "4096"
-    MinLength: "36"
     Type: String
+    Default: "['111111111111', '222222222222', '333333333333']"
+    MinLength: 36
+    MaxLength: 4096
 
   IncludedAccounts:
     Description: List of AWS account IDs to include when AccountSelectionMode is INCLUSION. Only used when AccountSelectionMode is INCLUSION.
     Type: String
-    Default: "[]"
+    Default: "['111111111111', '222222222222', '333333333333']"
     MinLength: 2
     MaxLength: 4096
 
