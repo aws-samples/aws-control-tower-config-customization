@@ -6,12 +6,27 @@ Parameters:
     Type: String
     Default: 1
 
+  AccountSelectionMode:
+    Description: Account selection mode - EXCLUSION (default) or INCLUSION
+    Type: String
+    Default: EXCLUSION
+    AllowedValues:
+      - EXCLUSION
+      - INCLUSION
+
   ExcludedAccounts:
-    Description: Excluded Accounts list. This list should contain Management account, Log Archive and Audit accounts at the minimum and other accounts you want to be excluded.
+    Description: Excluded Accounts list. This list should contain Management account, Log Archive and Audit accounts at the minimum and other accounts you want to be excluded. Only used when AccountSelectionMode is EXCLUSION.
     Default: "['111111111111', '222222222222', '333333333333']"
     MaxLength: "4096"
     MinLength: "36"
     Type: String
+
+  IncludedAccounts:
+    Description: List of AWS account IDs to include when AccountSelectionMode is INCLUSION. Only used when AccountSelectionMode is INCLUSION.
+    Type: String
+    Default: "[]"
+    MinLength: 2
+    MaxLength: 4096
 
   ConfigRecorderStrategy:
     Default: EXCLUSION
@@ -61,8 +76,13 @@ Metadata:
           default: "Mandatory Settings"
         Parameters:
           - CloudFormationVersion
-          - ExcludedAccounts
           - SourceS3Bucket
+      - Label:
+          default: "Account Selection Settings"
+        Parameters:
+          - AccountSelectionMode
+          - ExcludedAccounts
+          - IncludedAccounts
       - Label:
           default: "Recording Strategy Settings"
         Parameters:
@@ -120,7 +140,9 @@ Resources:
       ReservedConcurrentExecutions: 1
       Environment:
         Variables:
+          ACCOUNT_SELECTION_MODE: !Ref AccountSelectionMode
           EXCLUDED_ACCOUNTS: !Ref ExcludedAccounts
+          INCLUDED_ACCOUNTS: !Ref IncludedAccounts
           LOG_LEVEL: INFO
           SQS_URL: !Ref SQSConfigRecorder
 
