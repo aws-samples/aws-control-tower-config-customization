@@ -136,7 +136,8 @@ def lambda_handler(event, context):
                         'recordingGroup': {
                             'allSupported': True,
                             'includeGlobalResourceTypes': home_region
-                        }
+                        },
+                        'recordingMode': {'recordingFrequency': 'CONTINUOUS'},
                     })
                 logging.warning(
                     f"Configuration Recorder reset to default. Response: {json.dumps(response, default=str)}"
