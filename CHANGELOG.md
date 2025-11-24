@@ -5,6 +5,37 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0] - 2025-11-16
+
+### Added
+- Account inclusion mode feature allowing administrators to choose between EXCLUSION and INCLUSION modes for account targeting
+- `AccountSelectionMode` parameter with allowed values EXCLUSION (default) and INCLUSION
+- `IncludedAccounts` parameter for specifying accounts to include when using INCLUSION mode
+- "Account Selection Settings" parameter group in CloudFormation template for better organization
+- `should_process_account` function in Producer Lambda for centralized account filtering logic
+- Comprehensive logging of account filtering decisions with reasons for inclusion/exclusion
+
+### Changed
+- Producer Lambda now supports two account selection modes: EXCLUSION (existing behavior) and INCLUSION (new behavior)
+- Updated `send_message_to_sqs` function to use new `should_process_account` filtering logic
+- Updated `override_config_recorder` function to accept and pass through account selection parameters
+- Updated `update_excluded_accounts` function to handle both EXCLUSION and INCLUSION modes appropriately
+- Producer Lambda environment variables now include `ACCOUNT_SELECTION_MODE` and `INCLUDED_ACCOUNTS`
+
+### Documentation
+- Added comprehensive explanation of EXCLUSION vs INCLUSION modes in README
+- Added usage examples for INCLUSION mode configuration
+- Documented parameter usage clarifying when IncludedAccounts and ExcludedAccounts are used
+- Added warning about Management, Log Archive, and Audit accounts in inclusion mode
+- Documented backward compatibility guarantees for existing deployments
+
+### Backward Compatibility
+- Existing deployments continue to work without modification - `AccountSelectionMode` defaults to EXCLUSION
+- No changes required to Consumer Lambda - maintains single responsibility of applying Config Recorder changes
+- Existing `ExcludedAccounts` parameter remains unchanged and continues to work in EXCLUSION mode
+- All existing CloudFormation parameters, IAM permissions, and SQS message formats remain compatible
+- Zero-risk upgrade path: updating stack without changing parameters results in identical behavior
+
 ## [1.1.0] - 2025-11-15
 
 ### Added
