@@ -3,6 +3,8 @@ This github repository is part of AWS blog post https://aws.amazon.com/blogs/mt/
 
 Please refer to the blog for what this sample code does and how to use it.
 
+> ⭐ **Note**: If you benefit from this solution, please leave a star on this GitHub repo — there is no other way for me to track its adoption.
+
 ## CloudFormation Parameters
 
 This solution uses CloudFormation parameters to customize the AWS Config Recorder behavior across your Control Tower environment. Parameters are organized into four categories:
