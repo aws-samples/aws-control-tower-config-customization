@@ -85,6 +85,8 @@ These accounts have special roles in Control Tower governance and should general
 
 ### Recording Strategy Settings
 
+> **Note**: For accurate compliance reporting in the console, AWS Config must record the `AWS::Config::ResourceCompliance` resource type. If you customize which resource types Config records, verify compliance still displays as expected.
+
 #### ConfigRecorderStrategy
 - **Description**: Strategy for resource recording in AWS Config
 - **Type**: String
