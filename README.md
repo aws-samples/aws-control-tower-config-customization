@@ -87,7 +87,7 @@ These accounts have special roles in Control Tower governance and should general
 
 ### Recording Strategy Settings
 
-> **Note**: We recommend keeping the `AWS::Config::ResourceCompliance` resource type enabled. Although excluding it can be considered as part of a cost optimization strategy, doing so means losing AWS Config features that require it (see [Viewing and managing your AWS resources](https://docs.aws.amazon.com/config/latest/developerguide/view-manage-resource-console.html)) **and it also affects AWS Control Tower console functionality** — the Control Tower console may show stale or inaccurate compliance status. Weigh this dependency carefully before excluding this resource type, and if you do customize which resource types Config records, verify compliance still displays as expected in both the Config and Control Tower consoles.
+> **Note**: We recommend keeping the `AWS::Config::ResourceCompliance` resource type enabled. Although excluding it can be considered as part of a cost optimization strategy, doing so means losing AWS Config features that require it (see [Viewing and managing your AWS resources](https://docs.aws.amazon.com/config/latest/developerguide/view-manage-resource-console.html)) **and it also affects AWS Control Tower console functionality** — the Control Tower console may show stale or inaccurate compliance status. Weigh this dependency carefully before excluding this resource type, and if you do customize it, keep in mind the mentioned dependencies.
 
 #### ConfigRecorderStrategy
 - **Description**: Strategy for resource recording in AWS Config
