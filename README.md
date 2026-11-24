@@ -120,8 +120,9 @@ These accounts have special roles in Control Tower governance and should general
 - **Default**: `CONTINUOUS`
 - **Allowed Values**: `CONTINUOUS`, `DAILY`
 - **Usage**:
-  - `CONTINUOUS`: Records configuration changes as they occur (higher AWS Config costs)
-  - `DAILY`: Records configuration once per day (lower costs, 24-hour detection delay)
+  - `CONTINUOUS`: Records configuration changes as they occur
+  - `DAILY`: Records configuration once per day (24-hour detection delay)
+  - **Note**: Whether `CONTINUOUS` or `DAILY` is more cost-effective depends on the expected number of changes per day. See [AWS Config pricing](https://aws.amazon.com/config/pricing/) and [Best practices for analyzing AWS Config recording frequencies](https://aws.amazon.com/blogs/mt/best-practices-for-analyzing-aws-config-recording-frequencies/) for guidance.
 
 #### ConfigRecorderDailyResourceTypes
 - **Description**: Comma-separated list of resource types to record on a daily cadence
